@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from utils import flatten
+from utils import flatten_list
 
 
 ##------------------------------------------------------------------##
@@ -48,8 +48,8 @@ def cross_validate_time_point(X, y, trial_folds, train_predict_fn, use_features=
         predicted_probs_collection.append(predicted_probs)
         predicted_class_collection.append(predicted_class)
         fold_collection.append([fold] * len(test_indices))
-    return pd.DataFrame({"Fold": flatten(fold_collection),
-                         "Trial": flatten(trial_id_collection),
-                         "Target": flatten(target_collection),
-                         "Predicted Probability": flatten(predicted_probs_collection),
-                         "Predicted Class": flatten(predicted_class_collection)})
+    return pd.DataFrame({"Fold": flatten_list(fold_collection),
+                         "Trial": flatten_list(trial_id_collection),
+                         "Target": flatten_list(target_collection),
+                         "Predicted Probability": flatten_list(predicted_probs_collection),
+                         "Predicted Class": flatten_list(predicted_class_collection)})

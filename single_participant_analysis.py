@@ -10,7 +10,8 @@ import pandas as pd
 from cross_validation import fold_trials, cross_validate_time_point
 from data_extraction import create_time_point_data_frames
 from evaluate import evaluate
-from models import logistic_regression_model
+from models import logistic_regression_model, svm_model
+from utils import path_head
 
 ##------------------------------------------------------------------##
 ## Set Variables
@@ -18,10 +19,10 @@ from models import logistic_regression_model
 
 # Cross-validation
 NUM_FOLDS = 10
-MODEL_FN = logistic_regression_model
-TIME_POINT = 701  # 501 is the stimuli start point
+MODEL_FN = svm_model
+TIME_POINT = 601  # 501 is the stimuli start point
 SENSORS = ["all"]  # All sensors
-MODEL_NAME = "logistic_regression_1"
+MODEL_NAME = "svm_1"
 
 # Group
 GROUP_NAME = "group_1"
@@ -65,10 +66,10 @@ SAVE_RESULTS_PATH = join(RESULTS_PATH, GROUP_NAME + "/results/" +
 # Create results folder for current model
 # NOTE: Currently the other folders must be created manually
 if AUTO_CREATE_DIRS:
-    pathlib.Path(SAVE_PREDS_PATH).mkdir(parents=True, exist_ok=True)
-    pathlib.Path(SAVE_RESULTS_PATH).mkdir(parents=True, exist_ok=True)
-    if not RUN_FROM_RAW or (RUN_FROM_RAW and SAVE_RESULTS_PATH):
-        pathlib.Path(PRECOMPUTED_DIR_PATH).mkdir(parents=True, exist_ok=True)
+    pathlib.Path(path_head(SAVE_PREDS_PATH)).mkdir(parents=True, exist_ok=True)
+    pathlib.Path(path_head(SAVE_RESULTS_PATH)).mkdir(parents=True, exist_ok=True)
+    if RUN_FROM_RAW and SAVE_RESULTS_PATH:
+        pathlib.Path(path_head(PRECOMPUTED_DIR_PATH)).mkdir(parents=True, exist_ok=True)
 
 ##------------------------------------------------------------------##
 ## Load (and save) data
