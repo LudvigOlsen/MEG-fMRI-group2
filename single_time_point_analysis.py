@@ -1,5 +1,5 @@
 """
-MEG Analysis
+MEG Analysis - Single time point analysis (single participant)
 """
 
 from os.path import join
@@ -106,7 +106,6 @@ else:
 ## Running CV on one time point
 ##------------------------------------------------------------------##
 
-
 # Number of trials
 num_trials = labels.shape[0]
 
@@ -116,7 +115,7 @@ if SENSORS[0] == "all":
 else:
     sensors = SENSORS
 
-# Extract fold IDs
+# Create fold factor
 folds = fold_trials(num_trials, num_folds=NUM_FOLDS)
 
 # Run cross-validation
