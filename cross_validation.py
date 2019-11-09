@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from utils import flatten_list
+from evaluate import evaluate
 
 
 ##------------------------------------------------------------------##
@@ -53,3 +54,33 @@ def cross_validate_time_point(X, y, trial_folds, train_predict_fn, use_features=
                          "Target": flatten_list(target_collection),
                          "Predicted Probability": flatten_list(predicted_probs_collection),
                          "Predicted Class": flatten_list(predicted_class_collection)})
+
+
+def cross_validate_all_time_points(time_point_dfs, y, trial_folds, train_predict_fn, use_features):
+    # Repeated CV
+    repeats = len(trial_folds)
+
+    def cv_single(time_point_df, time_point, rep):
+        # Run cross-validation
+        # returns predictions as data frame
+        predictions = cross_validate_time_point(X=time_point_df, y=y, trial_folds=trial_folds[rep],
+                                                train_predict_fn=train_predict_fn,
+                                                use_features=use_features)
+        predictions["Time Point"] = time_point
+        predictions["Repetition"] = rep
+
+        # Evaluate predictions
+        eval = evaluate(list(predictions["Target"]),
+                        list(predictions["Predicted Class"]))
+        eval["Time Point"] = time_point
+        eval["Repetition"] = rep
+        print(eval)
+
+        return predictions, eval
+
+    preds, evals = zip(*[cv_single(df, tp, rep) for tp, df in enumerate(time_point_dfs) for rep in range(repeats)])
+
+    all_predictions = pd.concat(preds)
+    all_evaluations = pd.concat(evals)
+
+    return all_predictions, all_evaluations

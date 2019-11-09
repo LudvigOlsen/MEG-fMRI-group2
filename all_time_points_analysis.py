@@ -1,15 +1,14 @@
 """
-MEG Analysis - Single time point analysis (single participant)
+MEG Analysis - All time point analysis (single participant)
 """
 
 from os.path import join
 import pathlib
 import numpy as np
 import pandas as pd
+import glob
 
-from cross_validation import fold_trials, cross_validate_time_point
-from data_extraction import create_time_point_data_frames
-from evaluate import evaluate
+from cross_validation import fold_trials, cross_validate_all_time_points
 from models import logistic_regression_model, svm_model
 from utils import path_head, check_first_path_parts
 
@@ -19,8 +18,8 @@ from utils import path_head, check_first_path_parts
 
 # Cross-validation
 NUM_FOLDS = 10
+REPEATS = 3  # Run repeated cross-validation
 MODEL_FN = svm_model
-TIME_POINT = 601  # 501 is the stimuli start point
 SENSORS = ["all"]  # All sensors
 MODEL_NAME = "svm_2"
 
@@ -48,12 +47,10 @@ PRECOMPUTED_DIR_PATH = join(DATA_PATH, GROUP_NAME + "/precomputed/")
 
 # Result paths
 RESULTS_PATH = join(PROJECT_PATH, "results/time_point_models/single/")
-SAVE_PREDS_PATH = join(RESULTS_PATH, GROUP_NAME + "/predictions/" +
-                       MODEL_NAME + "/predictions_at_time_point_" +
-                       str(TIME_POINT) + ".csv")
+SAVE_PREDS_PATH = join(RESULTS_PATH, GROUP_NAME +
+                       "/predictions/" + MODEL_NAME + "/predictions_at_all_time_points.csv")
 SAVE_RESULTS_PATH = join(RESULTS_PATH, GROUP_NAME + "/results/" +
-                         MODEL_NAME + "/results_at_time_point_" +
-                         str(TIME_POINT) + ".csv")
+                         MODEL_NAME + "/results_at_all_time_points.csv")
 
 # Create results folder for current model
 # NOTE: Currently the other folders must be created manually
@@ -68,12 +65,14 @@ if AUTO_CREATE_DIRS:
 # Load labels
 labels = np.load(LABELS_PATH)
 
-# Load the precomputed data frame for the time point
-time_point_path = join(PRECOMPUTED_DIR_PATH, "time_point_{}.csv".format(TIME_POINT))
-current_time_point_df = pd.read_csv(time_point_path)
+# Detect all the precomputed time point data frames
+precomputed_df_paths = glob.glob(join(PRECOMPUTED_DIR_PATH, "time_point_*.csv"))[:3]
+
+# Load the precomputed data frames
+time_point_dfs = [pd.read_csv(path) for path in precomputed_df_paths]
 
 ##------------------------------------------------------------------##
-## Running CV on one time point
+## Running CV on all time points for a single participant
 ##------------------------------------------------------------------##
 
 # Number of trials
@@ -88,19 +87,14 @@ else:
     sensors = SENSORS
 
 # Create fold factor
-folds = fold_trials(num_trials, num_folds=NUM_FOLDS)
+folds = [fold_trials(num_trials, num_folds=NUM_FOLDS) for i in range(REPEATS)]
 
-# Run cross-validation
-# returns predictions as data frame
-predictions = cross_validate_time_point(X=current_time_point_df, y=labels,
-                                        trial_folds=folds, train_predict_fn=MODEL_FN,
-                                        use_features=sensors)
+# Cross-validate all time points
+predictions, evaluations = cross_validate_all_time_points(time_point_dfs=time_point_dfs,
+                                                          y=labels,
+                                                          trial_folds=folds,
+                                                          train_predict_fn=MODEL_FN,
+                                                          use_features=sensors)
+# Save output to disk
 predictions.to_csv(SAVE_PREDS_PATH)
-
-# Evaluate predictions
-eval = evaluate(list(predictions["Target"]),
-                list(predictions["Predicted Class"]))
-eval.to_csv(SAVE_RESULTS_PATH)
-
-print("Results for {} at time point {}:".format(GROUP_NAME, TIME_POINT))
-print(eval)
+evaluations.to_csv(SAVE_RESULTS_PATH)
