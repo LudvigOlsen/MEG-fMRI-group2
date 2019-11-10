@@ -66,7 +66,7 @@ if AUTO_CREATE_DIRS:
 labels = np.load(LABELS_PATH)
 
 # Detect all the precomputed time point data frames
-precomputed_df_paths = glob.glob(join(PRECOMPUTED_DIR_PATH, "time_point_*.csv"))[:3]
+precomputed_df_paths = glob.glob(join(PRECOMPUTED_DIR_PATH, "time_point_*.csv"))  # [:3]
 
 # Load the precomputed data frames
 time_point_dfs = [pd.read_csv(path) for path in precomputed_df_paths]
