@@ -10,7 +10,7 @@ import glob
 
 from cross_validation import fold_trials, cross_validate_all_time_points
 from models import logistic_regression_model, svm_model
-from utils import path_head, check_first_path_parts
+from utils import path_head, path_leaf, check_first_path_parts
 
 ##------------------------------------------------------------------##
 ## Set Variables
@@ -21,7 +21,7 @@ NUM_FOLDS = 10
 REPEATS = 3  # Run repeated cross-validation
 MODEL_FN = svm_model
 SENSORS = ["all"]  # All sensors
-MODEL_NAME = "svm_2"
+MODEL_NAME = "svm_3"
 
 # Group
 GROUP_NAME = "group_1"
@@ -66,10 +66,14 @@ if AUTO_CREATE_DIRS:
 labels = np.load(LABELS_PATH)
 
 # Detect all the precomputed time point data frames
-precomputed_df_paths = glob.glob(join(PRECOMPUTED_DIR_PATH, "time_point_*.csv"))  # [:3]
+precomputed_df_paths = glob.glob(join(PRECOMPUTED_DIR_PATH, "time_point_*.csv"))
+get_tp = lambda p: int(path_leaf(p).split("_")[-1].split(".")[0])
+# Add time point info and sort by it
+precomputed_df_paths = [(get_tp(p), p) for p in precomputed_df_paths]
+precomputed_df_paths.sort(key=lambda x: int(x[0]))
 
 # Load the precomputed data frames
-time_point_dfs = [pd.read_csv(path) for path in precomputed_df_paths]
+time_point_dfs = [(tp, pd.read_csv(path)) for tp, path in precomputed_df_paths]
 
 ##------------------------------------------------------------------##
 ## Running CV on all time points for a single participant
@@ -96,5 +100,5 @@ predictions, evaluations = cross_validate_all_time_points(time_point_dfs=time_po
                                                           train_predict_fn=MODEL_FN,
                                                           use_features=sensors)
 # Save output to disk
-predictions.to_csv(SAVE_PREDS_PATH)
 evaluations.to_csv(SAVE_RESULTS_PATH)
+predictions.to_csv(SAVE_PREDS_PATH)
