@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
 
 from utils import flatten_list
 from evaluate import evaluate
@@ -56,7 +57,8 @@ def cross_validate_time_point(X, y, trial_folds, train_predict_fn, use_features=
                          "Predicted Class": flatten_list(predicted_class_collection)})
 
 
-def cross_validate_all_time_points(time_point_dfs, y, trial_folds, train_predict_fn, use_features):
+def cross_validate_all_time_points(time_point_dfs, y, trial_folds, train_predict_fn,
+                                   use_features, parallel=False, cores=7):
     """
     Note: time_point_dfs should be list of tuples with time point and df, e.g. (0, df_0)
     """
@@ -82,7 +84,11 @@ def cross_validate_all_time_points(time_point_dfs, y, trial_folds, train_predict
 
         return predictions, eval
 
-    preds, evals = zip(*[cv_single(df, tp, rep) for tp, df in time_point_dfs for rep in range(repeats)])
+    if parallel:
+        preds, evals = zip(*Parallel(n_jobs=cores)(delayed(cv_single)(df, tp, rep) \
+                                                   for tp, df in time_point_dfs for rep in range(repeats)))
+    else:
+        preds, evals = zip(*[cv_single(df, tp, rep) for tp, df in time_point_dfs for rep in range(repeats)])
 
     all_predictions = pd.concat(preds)
     all_evaluations = pd.concat(evals)

@@ -21,7 +21,10 @@ NUM_FOLDS = 10
 REPEATS = 3  # Run repeated cross-validation
 MODEL_FN = svm_model
 SENSORS = ["all"]  # All sensors
-MODEL_NAME = "svm_3"
+MODEL_NAME = "svm_2"
+PARALLEL = True
+CORES = 7  # CPU cores to utilize when PARALLEL is True
+DEV_MODE = False  # Only uses the first 5 time points
 
 # Group
 GROUP_NAME = "group_1"
@@ -35,7 +38,13 @@ AUTO_CREATE_DIRS = True
 ##------------------------------------------------------------------##
 
 # Paths
-PROJECT_PATH = "/Users/ludvigolsen/Documents/Programmering/PythonLudvig/Machine learning/MEG-fMRI-group2/"
+USER = "LudvigUbuntu"
+
+# Just add your profile below, so we only need to change the user locally
+if USER == "LudvigMac":
+    PROJECT_PATH = "/Users/ludvigolsen/Documents/Programmering/PythonLudvig/Machine learning/MEG-fMRI-group2/"
+elif USER == "LudvigUbuntu":
+    PROJECT_PATH = "/home/ludvigolsen/Development/python/MEG-fMRI-group2"
 
 # Stop if the first two parts of the project path were not found
 check_first_path_parts(PROJECT_PATH)
@@ -48,9 +57,10 @@ PRECOMPUTED_DIR_PATH = join(DATA_PATH, GROUP_NAME + "/precomputed/")
 # Result paths
 RESULTS_PATH = join(PROJECT_PATH, "results/time_point_models/single/")
 SAVE_PREDS_PATH = join(RESULTS_PATH, GROUP_NAME +
-                       "/predictions/" + MODEL_NAME + "/predictions_at_all_time_points.csv")
+                       "/predictions/" + MODEL_NAME + "/" + GROUP_NAME + "_" + MODEL_NAME +
+                       "_predictions_at_all_time_points.csv")
 SAVE_RESULTS_PATH = join(RESULTS_PATH, GROUP_NAME + "/results/" +
-                         MODEL_NAME + "/results_at_all_time_points.csv")
+                         MODEL_NAME + "/" + GROUP_NAME + "_" + MODEL_NAME + "_results_at_all_time_points.csv")
 
 # Create results folder for current model
 # NOTE: Currently the other folders must be created manually
@@ -71,6 +81,9 @@ get_tp = lambda p: int(path_leaf(p).split("_")[-1].split(".")[0])
 # Add time point info and sort by it
 precomputed_df_paths = [(get_tp(p), p) for p in precomputed_df_paths]
 precomputed_df_paths.sort(key=lambda x: int(x[0]))
+
+if DEV_MODE:
+    precomputed_df_paths = precomputed_df_paths[:5]
 
 # Load the precomputed data frames
 time_point_dfs = [(tp, pd.read_csv(path)) for tp, path in precomputed_df_paths]
@@ -98,7 +111,9 @@ predictions, evaluations = cross_validate_all_time_points(time_point_dfs=time_po
                                                           y=labels,
                                                           trial_folds=folds,
                                                           train_predict_fn=MODEL_FN,
-                                                          use_features=sensors)
+                                                          use_features=sensors,
+                                                          parallel=PARALLEL,
+                                                          cores=CORES)
 # Save output to disk
 evaluations.to_csv(SAVE_RESULTS_PATH)
 predictions.to_csv(SAVE_PREDS_PATH)
