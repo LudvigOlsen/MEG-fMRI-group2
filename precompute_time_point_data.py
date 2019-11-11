@@ -27,14 +27,15 @@ AUTO_CREATE_DIR = False
 ##------------------------------------------------------------------##
 
 # Paths
-USER = "LudvigUbuntu"
+USER = "DarioUbuntu"
 
 # Just add your profile below, so we only need to change the user locally
 if USER == "LudvigMac":
     PROJECT_PATH = "/Users/ludvigolsen/Documents/Programmering/PythonLudvig/Machine learning/MEG-fMRI-group2/"
 elif USER == "LudvigUbuntu":
     PROJECT_PATH = "/home/ludvigolsen/Development/python/MEG-fMRI-group2"
-
+elif USER == "DarioUbuntu":
+    PROJECT_PATH = "/home/darcusco/Documents/CogSci/Advanced Cognitive Neuroscience/Meg assinment/MEG-fMRI-group2"
 # Stop if the first two parts of the project path were not found
 check_first_path_parts(PROJECT_PATH)
 
