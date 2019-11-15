@@ -16,7 +16,7 @@ from utils import check_first_path_parts
 ##------------------------------------------------------------------##
 
 # Group
-GROUP_NAME = "group_1"
+GROUP_NAME = "group_3"
 
 # Automatically create 'precomputed' folder
 # NOTE: Set project path before enabling this
@@ -27,7 +27,7 @@ AUTO_CREATE_DIR = False
 ##------------------------------------------------------------------##
 
 # Paths
-USER = "DarioUbuntu"
+USER = "LudvigMac"
 
 # Just add your profile below, so we only need to change the user locally
 if USER == "LudvigMac":

@@ -2,16 +2,16 @@
 MEG Analysis - Single time point analysis (single participant)
 """
 
-from os.path import join
 import pathlib
+from os.path import join
+
 import numpy as np
 import pandas as pd
 
 from cross_validation import fold_trials, cross_validate_time_point
-from data_extraction import create_time_point_data_frames
 from evaluate import evaluate
-from models import logistic_regression_model, svm_model
-from utils import path_head, check_first_path_parts
+from models import svm_model
+from utils import path_head, check_first_path_parts, extract_sensor_colnames
 
 ##------------------------------------------------------------------##
 ## Set Variables
@@ -36,12 +36,14 @@ AUTO_CREATE_DIRS = True
 ##------------------------------------------------------------------##
 
 # Paths
-USER = "LudvigUbuntu"
+USER = "LudvigMac"
 
 # Just add your profile below, so we only need to change the user locally
 if USER == "LudvigMac":
     PROJECT_PATH = "/Users/ludvigolsen/Documents/Programmering/PythonLudvig/Machine learning/MEG-fMRI-group2/"
 elif USER == "LudvigUbuntu":
+    PROJECT_PATH = "/home/ludvigolsen/Development/python/MEG-fMRI-group2"
+elif USER == "Matilde":
     PROJECT_PATH = "/home/ludvigolsen/Development/python/MEG-fMRI-group2"
 
 # Stop if the first two parts of the project path were not found
@@ -89,7 +91,7 @@ num_trials = labels.shape[0]
 if not isinstance(SENSORS, list):
     raise KeyError("SENSORS must be a list. For all sensors, specify as ['all'].")
 if SENSORS[0] == "all":
-    sensors = ["S_" + str(i) for i in range(labels.shape[0])]
+    sensors = extract_sensor_colnames(current_time_point_df)  # Note: Very naive implementation
 else:
     sensors = SENSORS
 

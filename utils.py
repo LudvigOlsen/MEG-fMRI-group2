@@ -5,6 +5,7 @@
 import ntpath
 from os.path import isdir
 
+
 def flatten_list(l):
     """
     Flattens list with sublists.
@@ -54,3 +55,7 @@ def check_first_path_parts(path):
     path_parts = split_path_recursively(path)
     assert isdir("/" + path_parts[0] + "/" + path_parts[1]), \
         "first part of path was not found. Did you specify it for your system?"
+
+
+def extract_sensor_colnames(df):
+    return [cn for cn in df.columns if "S_" in cn]

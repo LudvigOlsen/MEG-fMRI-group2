@@ -10,7 +10,7 @@ import glob
 
 from cross_validation import fold_trials, cross_validate_all_time_points
 from models import logistic_regression_model, svm_model
-from utils import path_head, path_leaf, check_first_path_parts
+from utils import path_head, path_leaf, check_first_path_parts, extract_sensor_colnames
 
 ##------------------------------------------------------------------##
 ## Set Variables
@@ -99,7 +99,7 @@ num_trials = labels.shape[0]
 if not isinstance(SENSORS, list):
     raise KeyError("SENSORS must be a list. For all sensors, specify as ['all'].")
 if SENSORS[0] == "all":
-    sensors = ["S_" + str(i) for i in range(labels.shape[0])]
+    sensors = extract_sensor_colnames(time_point_dfs[0][1])  # Note: Very naive implementation
 else:
     sensors = SENSORS
 

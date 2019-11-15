@@ -94,3 +94,41 @@ def cross_validate_all_time_points(time_point_dfs, y, trial_folds, train_predict
     all_evaluations = pd.concat(evals)
 
     return all_predictions, all_evaluations
+
+
+def cross_validate_all_time_points_by_group(time_point_dfs, y, trial_folds,
+                                            train_predict_fn,
+                                            use_features, parallel=False, cores=7):
+    """
+    Note: time_point_dfs should be list of tuples with group and a list of paths
+    (group_name, [(tp_1, path_1),(tp_2, path_2),...])
+    """
+
+    def cv_single(time_point_df, time_point, rep):
+        # Run cross-validation
+        # returns predictions as data frame
+        predictions = cross_validate_time_point(X=time_point_df, y=y, trial_folds=trial_folds[rep],
+                                                train_predict_fn=train_predict_fn,
+                                                use_features=use_features)
+        predictions["Time Point"] = time_point
+        predictions["Repetition"] = rep
+
+        # Evaluate predictions
+        eval = evaluate(list(predictions["Target"]),
+                        list(predictions["Predicted Class"]))
+        eval["Time Point"] = time_point
+        eval["Repetition"] = rep
+        print(eval)
+
+        return predictions, eval
+
+    if parallel:
+        preds, evals = zip(*Parallel(n_jobs=cores)(delayed(cv_single)(df, tp, rep) \
+                                                   for tp, df in time_point_dfs for rep in range(repeats)))
+    else:
+        preds, evals = zip(*[cv_single(df, tp, rep) for tp, df in time_point_dfs for rep in range(repeats)])
+
+    all_predictions = pd.concat(preds)
+    all_evaluations = pd.concat(evals)
+
+    return all_predictions, all_evaluations
