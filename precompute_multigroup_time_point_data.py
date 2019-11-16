@@ -59,6 +59,7 @@ check_first_path_parts(PROJECT_PATH)
 DATA_PATH = join(PROJECT_PATH, "data/")
 
 PRECOMPUTED_DIR_PATHS = [(group_name, join(DATA_PATH, group_name + "/precomputed/")) for group_name in GROUP_NAMES]
+LABELS_PATHS = [(group_name, join(DATA_PATH, group_name + "/pos_neg_img_labels.npy")) for group_name in GROUP_NAMES]
 
 SAVE_DATA_PATH = join(DATA_PATH, "multigroup/precomputed/")
 
@@ -111,3 +112,18 @@ else:
 [ts.to_csv(
     join(SAVE_DATA_PATH, "time_point_{}.csv".format(tp)))
     for tp, ts in time_point_dfs]
+
+
+def load_to_pd(labels_path, group_name):
+    labels = np.load(labels_path)
+    num_labels = len(labels)
+    return pd.DataFrame({"label": labels,
+                         "group": [group_name] * num_labels,
+                         "Trial": list(range(num_labels))})
+
+
+# Load labels
+labels = pd.concat([load_to_pd(labels_path, group_name) \
+                    for group_name, labels_path in LABELS_PATHS])
+# Save labels df to disk
+labels.to_csv(join(SAVE_DATA_PATH, "labels.csv"))

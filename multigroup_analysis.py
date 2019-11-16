@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import glob
 
-from cross_validation import fold_trials, cross_validate_all_time_points
+from cross_validation import fold_trials, cross_validate_all_time_points_by_group
 from models import logistic_regression_model, svm_model
 from utils import path_head, path_leaf, check_first_path_parts, extract_sensor_colnames
 
@@ -20,7 +20,7 @@ from utils import path_head, path_leaf, check_first_path_parts, extract_sensor_c
 MODEL_FN = svm_model
 SENSORS = ["all"]  # All sensors
 MODEL_NAME = "svm_3"
-PARALLEL = True
+PARALLEL = False
 CORES = 7  # CPU cores to utilize when PARALLEL is True
 DEV_MODE = True  # Only uses the first 5 time points
 
@@ -55,10 +55,10 @@ elif USER == "LudvigUbuntu":
 check_first_path_parts(PROJECT_PATH)
 
 # Data paths
-DATA_PATH = join(PROJECT_PATH, "data/")
+DATA_PATH = join(PROJECT_PATH, "data/multigroup/")
 
-LABELS_PATHS = [(group_name, join(DATA_PATH, group_name + "/pos_neg_img_labels.npy")) for group_name in GROUP_NAMES]
-PRECOMPUTED_DIR_PATHS = [(group_name, join(DATA_PATH, group_name + "/precomputed/")) for group_name in GROUP_NAMES]
+LABELS_PATH = join(DATA_PATH, "precomputed/labels.csv")
+PRECOMPUTED_DIR_PATH = join(DATA_PATH, "precomputed/")
 
 # Result paths
 RESULTS_PATH = join(PROJECT_PATH, "results/time_point_models/multigroups/")
@@ -79,34 +79,26 @@ if AUTO_CREATE_DIRS:
 ##------------------------------------------------------------------##
 
 # Load labels
-labels = [(group_name, np.load(labels_path)) for group_name, labels_path in LABELS_PATHS]
+labels = pd.read_csv(LABELS_PATH)
 
 # Detect all the precomputed time point data frames
 get_paths = lambda p: glob.glob(join(p, "time_point_*.csv"))
 add_tp = lambda p: (int(path_leaf(p).split("_")[-1].split(".")[0]), p)
-# head_if_dev = lambda l, c: l if not c else l[:5]
 
-precomputed_df_paths = [(group_name, get_paths(path)) for group_name, path in PRECOMPUTED_DIR_PATHS]
-precomputed_df_paths = [(group_name, sorted([add_tp(p) for p in paths],
-                                            key=lambda x: int(x[0]))) \
-                        for group_name, paths in precomputed_df_paths]
+precomputed_df_paths = get_paths(PRECOMPUTED_DIR_PATH)
+precomputed_df_paths = sorted([add_tp(p) for p in precomputed_df_paths],
+                              key=lambda x: int(x[0]))
 
 if DEV_MODE:
-    precomputed_df_paths = [(group_name, paths[:5]) for group_name, paths in precomputed_df_paths]
+    precomputed_df_paths = precomputed_df_paths[:5]
 
 # Load the precomputed data frames
-time_point_dfs = [(group_name, [(tp, pd.read_csv(p)) for tp, p in paths]) for group_name, paths in precomputed_df_paths]
+time_point_dfs = [(tp, pd.read_csv(path)) for tp, path in precomputed_df_paths]
 
 # Combine for each time frame
-num_time_points = len(precomputed_df_paths[0][1])
+num_time_points = len(time_point_dfs)
 print("Number of time points: ", num_time_points)
 
-# Concat group dfs for each time point
-# TODO Precompute this as well? Could save a lot of time!
-time_point_dfs = [pd.concat([tp_dfs[tp][1].assign(group=lambda x: group_name) for group_name, tp_dfs in time_point_dfs]) \
-                  for tp in range(num_time_points)]
-
-raise
 ##------------------------------------------------------------------##
 ## Running CV on all time points for a single participant
 ##------------------------------------------------------------------##
@@ -115,8 +107,8 @@ raise
 if not isinstance(SENSORS, list):
     raise KeyError("SENSORS must be a list. For all sensors, specify as ['all'].")
 if SENSORS[0] == "all":
-    sensors = [(group_name, extract_sensor_colnames(df)) for group_name, df in
-               time_point_dfs]  # Note: Very naive implementation
+    # Expects the same sensors in all time point dfs
+    sensors = extract_sensor_colnames(time_point_dfs[0][1])  # Note: Very naive implementation
 else:
     sensors = SENSORS
 # TODO Check at the best timepoint which sensors are most important!
@@ -126,7 +118,7 @@ else:
 # # Cross-validate all time points
 predictions, evaluations = cross_validate_all_time_points_by_group(time_point_dfs=time_point_dfs,
                                                                    y=labels,
-                                                                   trial_folds=GROUP_NAMES,
+                                                                   group_names=GROUP_NAMES,
                                                                    train_predict_fn=MODEL_FN,
                                                                    use_features=sensors,
                                                                    parallel=PARALLEL,
