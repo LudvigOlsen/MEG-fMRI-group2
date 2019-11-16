@@ -1,5 +1,6 @@
 """
 MEG Analysis - All time points for all participants analysis
+Requires that you've run precompute_time_point_data for all groups first!
 """
 
 from os.path import join
@@ -21,19 +22,15 @@ from utils import path_head, path_leaf, check_first_path_parts, extract_sensor_c
 GROUP_NAMES = [
     "group_1",
     "group_3",
-    # "group_4",
-    # "group_5",
-    # "group_6",
-    # "group_7"
+    "group_4",
+    "group_5",
+    "group_6",
+    "group_7"
 ]
 
-# Leave-one-group-out Cross-validation
-MODEL_FN = svm_model
-SENSORS = ["all"]  # All sensors
-MODEL_NAME = "svm_3"
 PARALLEL = True
 CORES = 7  # CPU cores to utilize when PARALLEL is True
-DEV_MODE = True  # Only uses the first 5 time points
+DEV_MODE = False  # Only uses the first 5 time points
 
 # Automatically create result and 'precomputed' folders
 # NOTE: Set project path before enabling this
@@ -44,7 +41,7 @@ AUTO_CREATE_DIRS = True
 ##------------------------------------------------------------------##
 
 # Paths
-USER = "LudvigMac"
+USER = "LudvigUbuntu"
 
 # Just add your profile below, so we only need to change the user locally
 if USER == "LudvigMac":
@@ -84,34 +81,29 @@ precomputed_df_paths = [(group_name, sorted([add_tp(p) for p in paths],
 if DEV_MODE:
     precomputed_df_paths = [(group_name, paths[:5]) for group_name, paths in precomputed_df_paths]
 
-# Load the precomputed data frames
-if PARALLEL:
-    load_dfs = lambda group_name, tp_paths: (group_name, [(tp, pd.read_csv(p)) for tp, p in tp_paths])
-    time_point_dfs = Parallel(n_jobs=max(len(GROUP_NAMES), CORES))(delayed(load_dfs)(group_name, tp_paths) \
-                                                                   for group_name, tp_paths in precomputed_df_paths)
-else:
-    time_point_dfs = [(group_name, [(tp, pd.read_csv(p)) for tp, p in paths]) \
-                      for group_name, paths in precomputed_df_paths]
-
-# Combine for each time frame
+# Num time points
 num_time_points = len(precomputed_df_paths[0][1])
 print("Number of time points: ", num_time_points)
 
-# Concat group dfs for each time point
-if PARALLEL:
-    concat_by_tp = lambda tp: (tp, pd.concat([tp_dfs[tp][1].assign(group=lambda x: group_name) \
-                                              for group_name, tp_dfs in time_point_dfs]))
-    time_point_dfs = Parallel(n_jobs=CORES)(delayed(concat_by_tp)(tp) \
-                                            for tp in range(num_time_points))
-else:
-    time_point_dfs = [(tp, pd.concat([tp_dfs[tp][1].assign(group=lambda x: group_name) \
-                                      for group_name, tp_dfs in time_point_dfs])) \
-                      for tp in range(num_time_points)]
 
-# Save data frames to disk
-[ts.to_csv(
-    join(SAVE_DATA_PATH, "time_point_{}.csv".format(tp)))
-    for tp, ts in time_point_dfs]
+# To save RAM, we do this for one at a time
+def precompute_single_time_point(precomputed_df_paths, time_point):
+    # Load the precomputed data frames for this time point
+
+    # (group_name, tp, df)
+    # assumes paths are sorted by time point and that time points are 0-N
+    time_point_dfs = pd.concat([pd.read_csv(paths[time_point][1]).assign(group=lambda x: group_name) \
+                                for group_name, paths in precomputed_df_paths])
+
+    # Save data frames to disk
+    time_point_dfs.to_csv(
+        join(SAVE_DATA_PATH, "time_point_{}.csv".format(time_point))
+    )
+
+
+# Precompute all time points
+Parallel(n_jobs=CORES)(delayed(precompute_single_time_point)(precomputed_df_paths, tp) \
+                       for tp in range(num_time_points))
 
 
 def load_to_pd(labels_path, group_name):
