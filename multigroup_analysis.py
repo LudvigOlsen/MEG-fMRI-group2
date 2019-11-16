@@ -1,5 +1,6 @@
 """
 MEG Analysis - All time points for all participants analysis
+Does not really seem to be able to predict other participants.
 """
 
 from os.path import join
@@ -9,7 +10,7 @@ import pandas as pd
 import glob
 
 from cross_validation import fold_trials, cross_validate_all_time_points_by_group
-from models import logistic_regression_model, svm_model
+from models import logistic_regression_model, svm_model, pca_svm_model, binarized_svm_model, yj_svm_model
 from utils import path_head, path_leaf, check_first_path_parts, extract_sensor_colnames
 
 ##------------------------------------------------------------------##
@@ -18,20 +19,20 @@ from utils import path_head, path_leaf, check_first_path_parts, extract_sensor_c
 
 # Leave-one-group-out Cross-validation
 MODEL_FN = svm_model
-SENSORS = ["all"]  # All sensors
+SENSORS = ["S_" + str(i) for i in range(60, 180)]  # ["all"]  # All sensors
 MODEL_NAME = "svm_3"
-PARALLEL = False
+PARALLEL = True
 CORES = 7  # CPU cores to utilize when PARALLEL is True
-DEV_MODE = True  # Only uses the first 5 time points
-
+DEV_MODE = False  # Only uses the first 5 time points
+CUT_FIRST_N = 0  # don't compute first n time points, to save time
 # Group
 GROUP_NAMES = [
     "group_1",
     "group_3",
-    # "group_4",
-    # "group_5",
-    # "group_6",
-    # "group_7"
+    "group_4",
+    "group_5",
+    "group_6",
+    "group_7"
 ]
 
 # Automatically create result and 'precomputed' folders
@@ -43,7 +44,7 @@ AUTO_CREATE_DIRS = True
 ##------------------------------------------------------------------##
 
 # Paths
-USER = "LudvigMac"
+USER = "LudvigUbuntu"
 
 # Just add your profile below, so we only need to change the user locally
 if USER == "LudvigMac":
@@ -89,11 +90,18 @@ precomputed_df_paths = get_paths(PRECOMPUTED_DIR_PATH)
 precomputed_df_paths = sorted([add_tp(p) for p in precomputed_df_paths],
                               key=lambda x: int(x[0]))
 
+if CUT_FIRST_N is not None:
+    precomputed_df_paths = precomputed_df_paths[CUT_FIRST_N:]
+
 if DEV_MODE:
     precomputed_df_paths = precomputed_df_paths[:5]
 
 # Load the precomputed data frames
 time_point_dfs = [(tp, pd.read_csv(path)) for tp, path in precomputed_df_paths]
+
+# Remove the groups not specified
+time_point_dfs = [(tp, df[df["group"].isin(GROUP_NAMES)]) for tp, df in time_point_dfs]
+labels = labels[labels["group"].isin(GROUP_NAMES)]
 
 # Combine for each time frame
 num_time_points = len(time_point_dfs)

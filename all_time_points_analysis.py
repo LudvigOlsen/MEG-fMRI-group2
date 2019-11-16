@@ -21,13 +21,13 @@ NUM_FOLDS = 10
 REPEATS = 3  # Run repeated cross-validation
 MODEL_FN = svm_model
 SENSORS = ["all"]  # All sensors
-MODEL_NAME = "svm_2"
+MODEL_NAME = "svm_3"
 PARALLEL = True
 CORES = 7  # CPU cores to utilize when PARALLEL is True
 DEV_MODE = False  # Only uses the first 5 time points
 
 # Group
-GROUP_NAME = "group_1"
+GROUP_NAME = "group_5"
 
 # Automatically create result and 'precomputed' folders
 # NOTE: Set project path before enabling this
