@@ -37,14 +37,17 @@ AUTO_CREATE_DIRS = True
 ## Set Paths
 ##------------------------------------------------------------------##
 
-# Paths
-USER = "LudvigUbuntu"
+# Set current user
+USER = "JoeMac"
 
 # Just add your profile below, so we only need to change the user locally
-if USER == "LudvigMac":
-    PROJECT_PATH = "/Users/ludvigolsen/Documents/Programmering/PythonLudvig/Machine learning/MEG-fMRI-group2/"
-elif USER == "LudvigUbuntu":
-    PROJECT_PATH = "/home/ludvigolsen/Development/python/MEG-fMRI-group2"
+# F.i. if multiple people in a study groups is working on the code,
+# it's annoying to have to find the path every time. Much easier
+# to just change the user above.
+if USER == "JoeMac":
+    PROJECT_PATH = "/Users/joe/path/to/MEG-fMRI-group2/"
+elif USER == "JoeUbuntu":
+    PROJECT_PATH = "/home/joe/path/to/MEG-fMRI-group2"
 
 # Stop if the first two parts of the project path were not found
 check_first_path_parts(PROJECT_PATH)
