@@ -27,3 +27,33 @@ def svm_model(X_train, X_test, y_train):
     # probs and classes from the output
     predicted_probs = predicted_class = clf.predict(X_test)
     return predicted_probs, predicted_class
+
+
+def pca_svm_model(X_train, X_test, y_train):
+    X_train, X_test = preprocess(X_train, X_test, standardize=True,
+                                 yeo_johnson=False, pca=True, binarize=False)
+    clf = LinearSVC(random_state=0, max_iter=100000).fit(X_train, y_train)
+    # svm doesn't have probabilities, but cross_validate_time_point expects both
+    # probs and classes from the output
+    predicted_probs = predicted_class = clf.predict(X_test)
+    return predicted_probs, predicted_class
+
+
+def binarized_svm_model(X_train, X_test, y_train):
+    X_train, X_test = preprocess(X_train, X_test, standardize=True,
+                                 yeo_johnson=False, pca=False, binarize=True)
+    clf = LinearSVC(random_state=0, max_iter=100000).fit(X_train, y_train)
+    # svm doesn't have probabilities, but cross_validate_time_point expects both
+    # probs and classes from the output
+    predicted_probs = predicted_class = clf.predict(X_test)
+    return predicted_probs, predicted_class
+
+
+def yj_svm_model(X_train, X_test, y_train):
+    X_train, X_test = preprocess(X_train, X_test, standardize=True,
+                                 yeo_johnson=True, pca=False, binarize=False)
+    clf = LinearSVC(random_state=0, max_iter=100000).fit(X_train, y_train)
+    # svm doesn't have probabilities, but cross_validate_time_point expects both
+    # probs and classes from the output
+    predicted_probs = predicted_class = clf.predict(X_test)
+    return predicted_probs, predicted_class

@@ -1,5 +1,6 @@
 """
-MEG Analysis - All time point analysis (single participant)
+MEG Analysis - All time points for all participants analysis
+Does not really seem to be able to predict other participants.
 """
 
 from os.path import join
@@ -8,26 +9,31 @@ import numpy as np
 import pandas as pd
 import glob
 
-from cross_validation import fold_trials, cross_validate_all_time_points
-from models import logistic_regression_model, svm_model
+from cross_validation import fold_trials, cross_validate_all_time_points_by_group
+from models import logistic_regression_model, svm_model, pca_svm_model, binarized_svm_model, yj_svm_model
 from utils import path_head, path_leaf, check_first_path_parts, extract_sensor_colnames
 
 ##------------------------------------------------------------------##
 ## Set Variables
 ##------------------------------------------------------------------##
 
-# Cross-validation
-NUM_FOLDS = 10
-REPEATS = 3  # Run repeated cross-validation
+# Leave-one-group-out Cross-validation
 MODEL_FN = svm_model
-SENSORS = ["all"]  # All sensors
+SENSORS = ["S_" + str(i) for i in range(60, 180)]  # ["all"]  # All sensors
 MODEL_NAME = "svm_3"
 PARALLEL = True
 CORES = 7  # CPU cores to utilize when PARALLEL is True
 DEV_MODE = False  # Only uses the first 5 time points
-
+CUT_FIRST_N = 0  # don't compute first n time points, to save time
 # Group
-GROUP_NAME = "group_5"
+GROUP_NAMES = [
+    "group_1",
+    "group_3",
+    "group_4",
+    "group_5",
+    "group_6",
+    "group_7"
+]
 
 # Automatically create result and 'precomputed' folders
 # NOTE: Set project path before enabling this
@@ -53,17 +59,18 @@ elif USER == "JoeUbuntu":
 check_first_path_parts(PROJECT_PATH)
 
 # Data paths
-DATA_PATH = join(PROJECT_PATH, "data/")
-LABELS_PATH = join(DATA_PATH, GROUP_NAME + "/pos_neg_img_labels.npy")
-PRECOMPUTED_DIR_PATH = join(DATA_PATH, GROUP_NAME + "/precomputed/")
+DATA_PATH = join(PROJECT_PATH, "data/multigroup/")
+
+LABELS_PATH = join(DATA_PATH, "precomputed/labels.csv")
+PRECOMPUTED_DIR_PATH = join(DATA_PATH, "precomputed/")
 
 # Result paths
-RESULTS_PATH = join(PROJECT_PATH, "results/time_point_models/single/")
-SAVE_PREDS_PATH = join(RESULTS_PATH, GROUP_NAME +
-                       "/predictions/" + MODEL_NAME + "/" + GROUP_NAME + "_" + MODEL_NAME +
+RESULTS_PATH = join(PROJECT_PATH, "results/time_point_models/multigroups/")
+SAVE_PREDS_PATH = join(RESULTS_PATH,
+                       "predictions/" + MODEL_NAME + "/multigroup_" + MODEL_NAME +
                        "_predictions_at_all_time_points.csv")
-SAVE_RESULTS_PATH = join(RESULTS_PATH, GROUP_NAME + "/results/" +
-                         MODEL_NAME + "/" + GROUP_NAME + "_" + MODEL_NAME + "_results_at_all_time_points.csv")
+SAVE_RESULTS_PATH = join(RESULTS_PATH, "results/" +
+                         MODEL_NAME + "/multigroup_" + MODEL_NAME + "_results_at_all_time_points.csv")
 
 # Create results folder for current model
 # NOTE: Currently the other folders must be created manually
@@ -76,14 +83,18 @@ if AUTO_CREATE_DIRS:
 ##------------------------------------------------------------------##
 
 # Load labels
-labels = np.load(LABELS_PATH)
+labels = pd.read_csv(LABELS_PATH)
 
 # Detect all the precomputed time point data frames
-precomputed_df_paths = glob.glob(join(PRECOMPUTED_DIR_PATH, "time_point_*.csv"))
-get_tp = lambda p: int(path_leaf(p).split("_")[-1].split(".")[0])
-# Add time point info and sort by it
-precomputed_df_paths = [(get_tp(p), p) for p in precomputed_df_paths]
-precomputed_df_paths.sort(key=lambda x: int(x[0]))
+get_paths = lambda p: glob.glob(join(p, "time_point_*.csv"))
+add_tp = lambda p: (int(path_leaf(p).split("_")[-1].split(".")[0]), p)
+
+precomputed_df_paths = get_paths(PRECOMPUTED_DIR_PATH)
+precomputed_df_paths = sorted([add_tp(p) for p in precomputed_df_paths],
+                              key=lambda x: int(x[0]))
+
+if CUT_FIRST_N is not None:
+    precomputed_df_paths = precomputed_df_paths[CUT_FIRST_N:]
 
 if DEV_MODE:
     precomputed_df_paths = precomputed_df_paths[:5]
@@ -91,32 +102,38 @@ if DEV_MODE:
 # Load the precomputed data frames
 time_point_dfs = [(tp, pd.read_csv(path)) for tp, path in precomputed_df_paths]
 
+# Remove the groups not specified
+time_point_dfs = [(tp, df[df["group"].isin(GROUP_NAMES)]) for tp, df in time_point_dfs]
+labels = labels[labels["group"].isin(GROUP_NAMES)]
+
+# Combine for each time frame
+num_time_points = len(time_point_dfs)
+print("Number of time points: ", num_time_points)
+
 ##------------------------------------------------------------------##
 ## Running CV on all time points for a single participant
 ##------------------------------------------------------------------##
-
-# Number of trials
-num_trials = labels.shape[0]
 
 # Set sensor if "all"
 if not isinstance(SENSORS, list):
     raise KeyError("SENSORS must be a list. For all sensors, specify as ['all'].")
 if SENSORS[0] == "all":
+    # Expects the same sensors in all time point dfs
     sensors = extract_sensor_colnames(time_point_dfs[0][1])  # Note: Very naive implementation
 else:
     sensors = SENSORS
+# TODO Check at the best timepoint which sensors are most important!
 
-# Create fold factor
-folds = [fold_trials(num_trials, num_folds=NUM_FOLDS) for i in range(REPEATS)]
+# Leave-one-group-out cross-validation
 
-# Cross-validate all time points
-predictions, evaluations = cross_validate_all_time_points(time_point_dfs=time_point_dfs,
-                                                          y=labels,
-                                                          trial_folds=folds,
-                                                          train_predict_fn=MODEL_FN,
-                                                          use_features=sensors,
-                                                          parallel=PARALLEL,
-                                                          cores=CORES)
+# # Cross-validate all time points
+predictions, evaluations = cross_validate_all_time_points_by_group(time_point_dfs=time_point_dfs,
+                                                                   y=labels,
+                                                                   group_names=GROUP_NAMES,
+                                                                   train_predict_fn=MODEL_FN,
+                                                                   use_features=sensors,
+                                                                   parallel=PARALLEL,
+                                                                   cores=CORES)
 # Save output to disk
 evaluations.to_csv(SAVE_RESULTS_PATH)
 predictions.to_csv(SAVE_PREDS_PATH)
