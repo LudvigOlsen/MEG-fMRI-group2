@@ -6,11 +6,10 @@ library(ggplot2)
 library(tidyverse)
 
 # Set working dir
-setwd("~/Development/python/MEG-fMRI-group2")
-# setwd("~/Documents/Programmering/PythonLudvig/Machine learning/MEG-fMRI-group2")
+setwd("path/to/MEG-fMRI-group2")
 
-group_name = "group_4"
-model_name = "svm_3"
+group_name = "group_1"
+model_name = "svm_2" 
 path_to_result <- paste0("results/time_point_models/single/",
                          group_name,
                          "/results/",
