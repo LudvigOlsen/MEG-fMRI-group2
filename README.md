@@ -10,3 +10,5 @@ For each group:
 * Results are put in `results/time_point_models/single/group_x/`.
 
 While there is code for running leave-one-group-out cross-validation, it is quite slow and doesn't seem to get good results. It's possible that some kind of windowed analysis (e.g. blocks of 10 time points) could work better.
+
+For help: Please ask questions in an issue here on GitHub so everyone can see the answer :)
