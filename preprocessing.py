@@ -17,7 +17,7 @@ def preprocess(X_train, X_test, standardize=True, yeo_johnson=False, pca=False, 
         X_train = principal.transform(X_train)
         X_test = principal.transform(X_test)
     if (standardize):
-        scaler = StandardScaler().fit(X_train)
+        scaler = StandardScaler(copy=False).fit(X_train)
         X_train = scaler.transform(X_train)
         X_test = scaler.transform(X_test)
     if (binarize):
