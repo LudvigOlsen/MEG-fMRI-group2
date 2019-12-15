@@ -111,3 +111,9 @@ venv.bak/
 *.tif
 *.zip
 *.fif
+
+fMRI/plots fmir/
+
+MEG activation plots/
+
+fMRI/
