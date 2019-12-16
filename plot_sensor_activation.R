@@ -46,7 +46,8 @@ sensor_names <- c('MEG0111', 'MEG0112', 'MEG0113', 'MEG0121', 'MEG0122', 'MEG012
 
 ##### Read precomputed files #####
 
-data_path <- "/Users/ludvigolsen/Documents/Programmering/PythonLudvig/Machine learning/MEG-fMRI-group2/data/"
+#data_path <- "/Users/ludvigolsen/Documents/Programmering/PythonLudvig/Machine learning/MEG-fMRI-group2/data/"
+data_path <- "/media/4tb/Data/MEG-cogsci-au19/data/"
 subjects <- paste0("group_", c(1, 3:7))
 
 # NOTE: Load the saved file instead of rerunning 
@@ -63,7 +64,7 @@ all_timepoints <- plyr::ldply(subjects, .parallel = TRUE, function(s){
 
 all_timepoints["X"] <- NULL
 colnames(all_timepoints) <- c(sensor_names, "Trial", "Time.Point", "Subject")
-# write.csv(all_timepoints, paste0(data_path, "all_timepoints_all_groups.csv"))
+write.csv(all_timepoints, paste0(data_path, "all_timepoints_all_groups.csv"))
 
 # NOTE:
 # The ones ending with the number 1 are magnetometers, the rest are gradiometers. 
@@ -114,11 +115,12 @@ magnetometers_average_absolute_sensors <- magnetometers_average_absolutes %>%
 gradiometers_average_absolute_sensors <- gradiometers_average_absolutes %>% 
   tidyr::gather(key="Sensor", value="Activation", 3:length(gradiometers_average_absolutes))
 
-
+# 1700 x 2069
+tiff(paste0(data_path, "AverageAbsoluteMagnetometers.tiff"), units="in", width=10, height=14, res=300)
 magnetometers_average_absolute_sensors %>% 
   ggplot(aes(x=Time.Point-500, y=Activation, color=Subject)) +
-  facet_wrap(.~Sensor) +
-  geom_line() + 
+  facet_wrap(.~Sensor, ncol=8) +
+  geom_line(size=0.3) + 
   theme_light() +
   labs(x="Time Point (ms)", y = "Average Absolute Sensor Activation", 
        title="Average Absolute Activation at Magnetometers") + 
@@ -127,11 +129,24 @@ magnetometers_average_absolute_sensors %>%
         axis.title.x = element_text(size=15),
         axis.title.y = element_text(size=15),
         title = element_text(size=18)) 
+dev.off()
 
+# split gradiometers in two
+gradiometer_partitions <- gradiometers_average_absolute_sensors %>% 
+  dplyr::group_by(Sensor) %>% 
+  dplyr::filter(row_number() == 1) %>% 
+  groupdata2::group(2, method="n_fill") %>% 
+  dplyr::select(Sensor, .groups)
+
+gradiometers_average_absolute_sensors <- gradiometers_average_absolute_sensors %>% 
+  dplyr::left_join(gradiometer_partitions, by = "Sensor")
+  
+tiff(paste0(data_path, "AverageAbsoluteGradiometersFirstHalf.tiff"), units="in", width=10, height=14, res=300)
 gradiometers_average_absolute_sensors %>% 
+  dplyr::filter(.groups == 1) %>% 
   ggplot(aes(x=Time.Point-500, y=Activation, color=Subject)) +
-  facet_wrap(.~Sensor) +
-  geom_line() + 
+  facet_wrap(.~Sensor, ncol=8) +
+  geom_line(size=0.3) + 
   theme_light() +
   labs(x="Time Point (ms)", y = "Average Absolute Sensor Activation", 
        title="Average Absolute Activation at Gradiometers") + 
@@ -140,6 +155,23 @@ gradiometers_average_absolute_sensors %>%
         axis.title.x = element_text(size=15),
         axis.title.y = element_text(size=15),
         title = element_text(size=18)) 
+dev.off()
+
+tiff(paste0(data_path, "AverageAbsoluteGradiometersSecondHalf.tiff"), units="in", width=10, height=14, res=300)
+gradiometers_average_absolute_sensors %>% 
+  dplyr::filter(.groups == 2) %>% 
+  ggplot(aes(x=Time.Point-500, y=Activation, color=Subject)) +
+  facet_wrap(.~Sensor, ncol=8) +
+  geom_line(size=0.3) + 
+  theme_light() +
+  labs(x="Time Point (ms)", y = "Average Absolute Sensor Activation", 
+       title="Average Absolute Activation at Gradiometers") + 
+  theme(axis.text.y = element_text(size=9),
+        axis.text.x = element_text(size=9, hjust = 1, angle = 90),
+        axis.title.x = element_text(size=15),
+        axis.title.y = element_text(size=15),
+        title = element_text(size=18)) 
+dev.off()
 
 magnetometers_average_absolute_overall <- magnetometers_average_absolute_sensors %>% 
   dplyr::group_by(Subject, Time.Point) %>%
@@ -149,6 +181,7 @@ gradiometers_average_absolute_overall <- gradiometers_average_absolute_sensors %
   dplyr::group_by(Subject, Time.Point) %>%
   dplyr::summarise(Activation = mean(Activation))
 
+tiff(paste0(data_path, "AverageAbsoluteMagnotometerActivation.tiff"), units="in", width=8, height=6.4, res=300)
 magnetometers_average_absolute_overall %>% 
   ggplot(aes(x = Time.Point-500, y=Activation, color = Subject)) +
   geom_line() +
@@ -156,13 +189,15 @@ magnetometers_average_absolute_overall %>%
   labs(x="Time Point (ms)", y = "Average Absolute Activation", 
        title="Average Absolute Magnetometer Activation") + 
   scale_x_continuous(breaks = round(seq(-500, 1000, by = 100),1))
+dev.off()
 
+tiff(paste0(data_path, "AverageAbsoluteGradiotometerActivation.tiff"), units="in", width=8, height=6.4, res=300)
 gradiometers_average_absolute_overall %>% 
   ggplot(aes(x = Time.Point-500, y=Activation, color = Subject)) +
   geom_line() +
   theme_light() +
   labs(x="Time Point (ms)", y = "Average Absolute Activation", 
-       title="Average Absolute Magnetometer Activation") + 
+       title="Average Absolute Gradiometer Activation") + 
   scale_x_continuous(breaks = round(seq(-500, 1000, by = 100),1))
-
+dev.off()
 
